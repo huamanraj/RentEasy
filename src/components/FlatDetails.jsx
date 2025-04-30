@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { Wifi, Car, MapPin, Phone } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 const FlatDetails = ({ flat }) => {
   if (!flat) {
@@ -42,7 +43,7 @@ const FlatDetails = ({ flat }) => {
     if (ownerNumber) {
       window.location.href = `tel:${ownerNumber}`;
     } else {
-      alert('Contact number not available');
+      toast.error('Contact number not available');
     }
   };
 

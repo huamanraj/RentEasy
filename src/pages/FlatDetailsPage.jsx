@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import ImageGallery from '../components/ImageGallery';
 import FlatDetails from '../components/FlatDetails';
 import ReviewSection from '../components/ReviewSection';
+import LoginModal from '../components/LoginModal';
 import { flatsDb } from '../services/appwrite';
 
 const FlatDetailsPage = () => {
@@ -10,6 +11,7 @@ const FlatDetailsPage = () => {
   const [flatData, setFlatData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchFlatData = async () => {
@@ -39,6 +41,10 @@ const FlatDetailsPage = () => {
 
     fetchFlatData();
   }, [id]);
+
+  const handleLoginRequired = () => {
+    setIsLoginModalOpen(true);
+  };
 
   if (loading) {
     return (
@@ -98,8 +104,16 @@ const FlatDetailsPage = () => {
       </div>
 
       <div className="mt-16 pt-8 border-t border-gray-200">
-        <ReviewSection flatId={id} />
+        <ReviewSection 
+          flatId={id} 
+          onLoginRequired={handleLoginRequired}
+        />
       </div>
+
+      <LoginModal 
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+      />
     </div>
   );
 };

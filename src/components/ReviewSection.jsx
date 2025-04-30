@@ -5,10 +5,17 @@ import { useAuth } from '../hooks/useAuth';
 import { databases } from '../utils/appwriteConfig';
 import { ID, Query } from 'appwrite';
 import toast from 'react-hot-toast';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import EmailVerificationAlert from './common/EmailVerificationAlert';
 
-const ReviewSection = ({ flatId }) => {
-  const { user } = useAuth();
-  const [newReview, setNewReview] = useState({ rating: 5, reviewText: '' });
+const ReviewSection = ({ flatId, onLoginRequired }) => {
+  const { user, emailVerified } = useAuth();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [newReview, setNewReview] = useState({
+    rating: Number(searchParams.get('rating')) || 5,
+    reviewText: searchParams.get('reviewText') || ''
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [hasUserReviewed, setHasUserReviewed] = useState(false);
@@ -74,7 +81,14 @@ const ReviewSection = ({ flatId }) => {
   const handleSubmitReview = async (e) => {
     e.preventDefault();
     if (!user) {
-      toast.error('Please login to submit a review');
+      // Save review data to URL params
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('rating', newReview.rating);
+      currentUrl.searchParams.set('reviewText', newReview.reviewText);
+      navigate(`${currentUrl.pathname}${currentUrl.search}`);
+      
+      // Trigger login modal
+      onLoginRequired();
       return;
     }
 
@@ -146,25 +160,14 @@ const ReviewSection = ({ flatId }) => {
     <div className="space-y-6 bg-white p-6 rounded-lg shadow">
       <h2 className="text-2xl font-semibold text-textDark border-b pb-4">Reviews & Ratings</h2>
       
-      <div className="bg-gray-50 p-4 rounded-lg flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="text-4xl font-bold text-primary">{overallRating}</div>
-          <div className="flex flex-col">
-            <div className="flex">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Star 
-                  key={star}
-                  fill={overallRating >= star ? "currentColor" : "none"}
-                  className={`w-5 h-5 ${overallRating >= star ? "text-yellow-400" : "text-gray-300"}`}
-                />
-              ))}
-            </div>
-            <div className="text-sm text-gray-600">Based on {reviews.length} reviews</div>
-          </div>
-        </div>
-      </div>
+      {/* Show verification alert for unverified users */}
+      {user && !emailVerified && !hasUserReviewed && (
+        <EmailVerificationAlert 
+          message="You need to verify your email address before posting reviews."
+        />
+      )}
 
-      {user && !hasUserReviewed && (
+      {!hasUserReviewed && emailVerified && (
         <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
           <h3 className="text-lg font-medium text-textDark mb-4">Write a Review</h3>
           <form onSubmit={handleSubmitReview} className="space-y-4">
@@ -266,6 +269,7 @@ const ReviewSection = ({ flatId }) => {
 
 ReviewSection.propTypes = {
   flatId: PropTypes.string.isRequired,
+  onLoginRequired: PropTypes.func.isRequired,
 };
 
 export default ReviewSection;

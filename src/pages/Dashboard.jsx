@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 import { flatsDb, databases, DATABASES, COLLECTIONS } from '../services/appwrite';
 import { useNavigate } from 'react-router-dom';
 import { Query } from 'appwrite';
 import FlatCard from '../components/dashboard/FlatCard';
 import DashboardStats from '../components/dashboard/DashboardStats';
 import { account } from '../utils/appwriteConfig';
+import EmailVerification from '../components/dashboard/EmailVerification';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
   const [userFlats, setUserFlats] = useState([]);
@@ -18,6 +21,7 @@ const Dashboard = () => {
   const flatsPerPage = 10;
   
   const navigate = useNavigate();
+  const { emailVerified, user, checkUserSession } = useAuth();
 
   useEffect(() => {
     const getCurrentUser = async () => {
@@ -128,6 +132,29 @@ const Dashboard = () => {
     fetchUserListings();
   }, [currentPage, availableFields, userId]);
 
+  useEffect(() => {
+    // Check for verification status when returning from email verification
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('userId');
+    const secret = urlParams.get('secret');
+
+    if (userId && secret) {
+      const verifyEmail = async () => {
+        try {
+          await account.updateVerification(userId, secret);
+          await checkUserSession();
+          toast.success('Email verified successfully!');
+          // Clean up URL parameters
+          window.history.replaceState({}, document.title, '/dashboard');
+        } catch (error) {
+          toast.error('Email verification failed. Please try again.');
+          console.error('Verification error:', error);
+        }
+      };
+      verifyEmail();
+    }
+  }, [checkUserSession]);
+
   const handleStatusChange = async (flatId, isAvailable) => {
     try {
       setLoading(true);
@@ -144,11 +171,12 @@ const Dashboard = () => {
           flat.$id === flatId ? {...flat, isAvailable} : flat
         )
       );
-        
+      
+      toast.success(`Listing ${isAvailable ? 'activated' : 'deactivated'} successfully`);
       setLoading(false);
     } catch (err) {
       console.error("Error updating availability:", err);
-      alert("Failed to update availability: " + err.message);
+      toast.error("Failed to update availability: " + err.message);
       setLoading(false);
     }
   };
@@ -160,6 +188,7 @@ const Dashboard = () => {
     
     try {
       setLoading(true);
+      const loadingToast = toast.loading('Deleting listing...');
       
       await databases.deleteDocument(
         DATABASES.MAIN,
@@ -175,10 +204,12 @@ const Dashboard = () => {
         setCurrentPage(prev => prev - 1);
       }
       
+      toast.dismiss(loadingToast);
+      toast.success('Listing deleted successfully');
       setLoading(false);
     } catch (err) {
       console.error("Error deleting flat:", err);
-      alert("Failed to delete listing: " + err.message);
+      toast.error("Failed to delete listing: " + err.message);
       setLoading(false);
     }
   };
@@ -201,6 +232,20 @@ const Dashboard = () => {
     if (currentPage > 1) {
       setCurrentPage(prev => prev - 1);
     }
+  };
+
+  const handleProfileClick = () => {
+    toast('Profile feature coming soon!', {
+      icon: '👋',
+      duration: 2000
+    });
+  };
+
+  const handleMessagesClick = () => {
+    toast('Messages feature coming soon!', {
+      icon: '💬',
+      duration: 2000
+    });
   };
 
   const renderFlatCard = (flat) => {
@@ -232,6 +277,15 @@ const Dashboard = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {!emailVerified && user && (
+            <div className="lg:col-span-4">
+              <EmailVerification 
+                email={user.email} 
+                onVerificationComplete={checkUserSession}
+              />
+            </div>
+          )}
+          
           <div className="lg:col-span-3">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-semibold text-textDark">My Listed Properties</h2>
@@ -318,7 +372,7 @@ const Dashboard = () => {
                   New Listing
                 </button>
                 <button 
-                  onClick={() => navigate('/profile')}
+                  onClick={handleProfileClick}
                   className="w-full py-2 bg-gray-50 text-gray-800 rounded hover:bg-gray-100 transition-colors flex items-center justify-center"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -327,7 +381,7 @@ const Dashboard = () => {
                   My Profile
                 </button>
                 <button 
-                  onClick={() => navigate('/messages')}
+                  onClick={handleMessagesClick}
                   className="w-full py-2 bg-gray-50 text-gray-800 rounded hover:bg-gray-100 transition-colors flex items-center justify-center"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">

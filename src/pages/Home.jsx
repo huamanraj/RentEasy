@@ -7,6 +7,7 @@ import { filterByDistance } from '../utils/geoUtils';
 import { flatsDb } from '../services/appwrite';
 import { Query } from 'appwrite';
 import LoginModal from '../components/LoginModal';
+import LocationPromptDialog from '../components/LocationPromptDialog';
 
 const Home = () => {
   const [listings, setListings] = useState([]);
@@ -146,6 +147,12 @@ const Home = () => {
     fetchListings();
   }, [filters, userLocation, page]);
 
+  useEffect(() => {
+    if (permissionStatus === 'granted') {
+      setShowLocationPrompt(false);
+    }
+  }, [permissionStatus]);
+
   const handleFilterChange = (newFilters) => {
     setFilters({ ...filters, ...newFilters });
   };
@@ -173,49 +180,14 @@ const Home = () => {
     <div className="">
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
       
-      {showLocationPrompt && permissionStatus !== 'granted' && (
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white p-4 mb-4 rounded-lg shadow-md mx-auto max-w-7xl"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="font-semibold text-lg text-textDark">
-                {isDefaultLocation ? 'Using Jaipur, Jagatpura as your location' : 'Allow location access?'}
-              </h3>
-              <p className="text-sm text-textLight mt-1">
-                {isDefaultLocation 
-                  ? 'We\'re currently showing properties based on a default location. Allow location access to see rental properties near your actual location.'
-                  : 'To show you rental properties near you, we need your location. This helps us calculate distances and show relevant results.'}
-              </p>
-            </div>
-            <button 
-              onClick={handleCloseLocationPrompt} 
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ×
-            </button>
-          </div>
-          <div className="mt-3 flex space-x-3">
-            {permissionStatus === 'denied' && (
-              <button 
-                onClick={handleTryAgain}
-                className="px-4 py-2 bg-primary text-white rounded-md hover:bg-red-700 transition duration-200"
-              >
-                {locationLoading ? 'Getting Location...' : 'Try Again'}
-              </button>
-            )}
-            <button 
-              onClick={handleCloseLocationPrompt}
-              className="px-4 py-2 bg-gray-200 text-textDark rounded-md hover:bg-gray-300 transition duration-200"
-            >
-              {isDefaultLocation ? 'Continue with Default' : 'Not Now'}
-            </button>
-          </div>
-        </motion.div>
-      )}
+      <LocationPromptDialog 
+        isOpen={showLocationPrompt}
+        onClose={handleCloseLocationPrompt}
+        onTryAgain={handleTryAgain}
+        isDefaultLocation={isDefaultLocation}
+        locationLoading={locationLoading}
+        permissionStatus={permissionStatus}
+      />
 
       <section
         className="relative bg-cover bg-center py-20 mb-12"

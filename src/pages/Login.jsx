@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Mail, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-hot-toast';
+import { validatePassword } from '../utils/validation';
 
 const LoginPage = () => {
   const [isLoginView, setIsLoginView] = useState(true);
@@ -25,20 +27,37 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    if (!isLoginView) {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isValid) {
+        toast.error(passwordValidation.message);
+        setError(passwordValidation.message);
+        return;
+      }
+    }
+    
     setLoading(true);
+    const loadingToast = toast.loading(isLoginView ? 'Logging in...' : 'Creating account...');
     
     try {
       if (isLoginView) {
         await login(email, password);
+        toast.dismiss(loadingToast);
+        toast.success('Logged in successfully!');
       } else {
         // Make sure name is not empty for registration
         if (!name.trim()) {
           throw new Error('Please enter your name');
         }
         await register(email, password, name);
+        toast.dismiss(loadingToast);
+        toast.success('Account created successfully!');
       }
       navigate('/dashboard');
     } catch (err) {
+      toast.dismiss(loadingToast);
+      toast.error(err.message || 'An error occurred');
       setError(err.message || 'An error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -68,6 +87,11 @@ const LoginPage = () => {
              </div>
              <div>
                <label htmlFor="password-page" className="sr-only">Password</label>
+               {!isLoginView && (
+                 <p className="text-xs text-gray-500 mb-1">
+                   Must be 8-14 characters with at least one capital letter and one special character
+                 </p>
+               )}
                <input id="password-page" name="password" type="password" autoComplete="current-password" required className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
              </div>
            </div>

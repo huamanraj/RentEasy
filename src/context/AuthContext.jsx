@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [appwriteReady, setAppwriteReady] = useState(true);
+  const [emailVerified, setEmailVerified] = useState(false);
 
   useEffect(() => {
     checkUserSession();
@@ -17,6 +18,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const currentUser = await account.get();
       setUser(currentUser);
+      setEmailVerified(currentUser.emailVerification);
     } catch (error) {
       if (error.code === 401) {
         setUser(null);
@@ -59,9 +61,18 @@ export const AuthProvider = ({ children }) => {
     }
     
     try {
-      await account.create('unique()', email, password, name);
+      const userId = crypto.randomUUID(); // Generate a unique ID
+      await account.create(
+        userId,
+        email,
+        password,
+        name
+      );
+      
+      // Login after successful registration
       await login(email, password);
       
+      // Update preferences after successful login
       await account.updatePrefs({
         userName: name
       });
@@ -69,7 +80,13 @@ export const AuthProvider = ({ children }) => {
       return user;
     } catch (error) {
       console.error('Registration failed:', error);
-      throw error;
+      if (error.code === 400) {
+        throw new Error('Invalid email or password format. Please check your inputs and try again.');
+      } else if (error.code === 409) {
+        throw new Error('An account with this email already exists.');
+      } else {
+        throw new Error('Registration failed. Please try again.');
+      }
     }
   };
 
@@ -77,9 +94,11 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     appwriteReady,
+    emailVerified,
     login,
     logout,
-    register
+    register,
+    checkUserSession
   };
 
   return (

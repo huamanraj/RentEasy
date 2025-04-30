@@ -11,6 +11,11 @@ const PostFlat = () => {
   const { user } = useAuth();
 
   const handlePostSubmit = async (formData, progressCallback) => {
+    if (!user.emailVerified) {
+      toast.error('Please verify your email before posting a property');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
     

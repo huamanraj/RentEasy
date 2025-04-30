@@ -9,7 +9,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState('Loading...');
+  const [currentLocation, setCurrentLocation] = useState('Jaipur, Jagatpura');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -23,18 +23,26 @@ const Navbar = () => {
 
   useEffect(() => {
     if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(async (position) => {
-        try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`
-          );
-          const data = await response.json();
-          const city = data.address.city || data.address.town || 'Unknown';
-          setCurrentLocation(city);
-        } catch (error) {
-          setCurrentLocation('');
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`
+            );
+            const data = await response.json();
+            const city = data.address.city || data.address.town || 'Jaipur';
+            setCurrentLocation(city);
+          } catch (error) {
+            setCurrentLocation('Jaipur');
+          }
+        },
+        () => {
+          // On error or denial, set default location
+          setCurrentLocation('Jaipur');
         }
-      });
+      );
+    } else {
+      setCurrentLocation('Jaipur');
     }
   }, []);
 
@@ -84,7 +92,7 @@ const Navbar = () => {
               <div className="flex items-center">
                 <div className="flex-shrink-0">
                   <Link to="/" className="text-2xl font-bold text-primary">
-                    RentEasy
+                    RentEasily
                   </Link>
                 </div>
                 {currentLocation && (

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, User, Mail, Lock } from 'lucide-react';
 import PropTypes from 'prop-types';
 import { useAuth } from '../context/AuthContext';
+import { toast } from 'react-hot-toast';
+import { validatePassword } from '../utils/validation';
 
 const LoginModal = ({ isOpen, onClose }) => {
   const [isLoginView, setIsLoginView] = useState(true);
@@ -29,18 +31,36 @@ const LoginModal = ({ isOpen, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    if (!isLoginView) {
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isValid) {
+        toast.error(passwordValidation.message);
+        setError(passwordValidation.message);
+        return;
+      }
+    }
+    
     setLoading(true);
+    const loadingToast = toast.loading(isLoginView ? 'Logging in...' : 'Creating account...');
+    
     try {
       if (isLoginView) {
         await login(email, password);
+        toast.dismiss(loadingToast);
+        toast.success('Logged in successfully!');
       } else {
         if (!name.trim()) {
           throw new Error('Please enter your name');
         }
         await register(email, password, name);
+        toast.dismiss(loadingToast);
+        toast.success('Account created successfully!');
       }
       handleClose();
     } catch (err) {
+      toast.dismiss(loadingToast);
+      toast.error(err.message || 'An error occurred');
       setError(err.message || 'An error occurred. Please try again.');
       console.error(isLoginView ? 'Login failed:' : 'Registration failed:', err);
     } finally {
@@ -124,7 +144,11 @@ const LoginModal = ({ isOpen, onClose }) => {
                 </div>
               </div>
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Password
+                  
+                </label>
+                
                 <div className="relative mt-1">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Lock size={18} className="text-gray-400" />
@@ -139,6 +163,11 @@ const LoginModal = ({ isOpen, onClose }) => {
                     placeholder="********"
                   />
                 </div>
+                {!isLoginView && (
+                  <span className="text-xs py-1 font-thin text-gray-500 block">
+                    Password must be at least 8 characters long and contain at least one letter, one number, and one special character
+                  </span>
+                )}
               </div>
 
               <button
