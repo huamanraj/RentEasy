@@ -42,19 +42,21 @@ const FilterBar = ({
     const value = e.target.value;
     setLocationInput(value);
     
-    // Clear any existing timeout to prevent multiple calls
+    // Clear any existing timeout
     if (locationTimeoutRef.current) {
       clearTimeout(locationTimeoutRef.current);
     }
     
-    // Debounce to avoid too many re-filters as user types
-    locationTimeoutRef.current = setTimeout(() => {
-      if (isMounted.current) {
-        onFilterChange({ location: value });
-      }
-    }, 500);
+    // Only trigger search if input length is at least 2 characters or empty
+    if (value.length >= 2 || value.length === 0) {
+      locationTimeoutRef.current = setTimeout(() => {
+        if (isMounted.current) {
+          onFilterChange({ location: value });
+        }
+      }, 500);
+    }
   };
-  
+
   // Handler for price range slider
   const handlePriceChange = (e) => {
     const value = Number(e.target.value);
@@ -66,7 +68,7 @@ const FilterBar = ({
   const handleTypeChange = (e) => {
     onFilterChange({ propertyType: e.target.value });
   };
-  
+
   // Handler for sorting selection
   const handleSortChange = (e) => {
     onFilterChange({ sortBy: e.target.value });
@@ -88,8 +90,9 @@ const FilterBar = ({
             id="location" 
             value={locationInput}
             onChange={handleLocationChange}
-            placeholder="Enter city or area" 
+            placeholder="Enter area to search" 
             className="w-full p-2 border border-gray-300 rounded-[18px] focus:ring-primary focus:border-primary" 
+            minLength={2}
           />
         </div>
 
@@ -173,7 +176,6 @@ const FilterBar = ({
       {(filters.location || filters.propertyType !== 'Any' || filters.maxPrice !== 100000 || filters.nearMe) && (
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-sm text-gray-500">Active filters:</span>
-          
           {filters.location && (
             <span className="bg-gray-100 text-textDark text-sm px-2 py-1 rounded-[18px] flex items-center">
               Location: {filters.location}

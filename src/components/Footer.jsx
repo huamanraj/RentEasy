@@ -1,4 +1,4 @@
-import { Github, Linkedin, Mail } from 'lucide-react'; // Example icons
+import { Github, Linkedin, Mail } from 'lucide-react';
 
 const Footer = () => {
   return (

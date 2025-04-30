@@ -18,7 +18,6 @@ export const AuthProvider = ({ children }) => {
       const currentUser = await account.get();
       setUser(currentUser);
     } catch (error) {
-      // 401 errors are expected when no session exists
       if (error.code === 401) {
         setUser(null);
       } else {
@@ -63,7 +62,6 @@ export const AuthProvider = ({ children }) => {
       await account.create('unique()', email, password, name);
       await login(email, password);
       
-      // Update user preferences with the name
       await account.updatePrefs({
         userName: name
       });
@@ -91,7 +89,6 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Add prop validation
 AuthProvider.propTypes = {
   children: PropTypes.node.isRequired,
 };

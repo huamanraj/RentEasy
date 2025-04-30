@@ -19,7 +19,6 @@ const Dashboard = () => {
   
   const navigate = useNavigate();
 
-  // Fetch current user's ID
   useEffect(() => {
     const getCurrentUser = async () => {
       try {
@@ -28,22 +27,14 @@ const Dashboard = () => {
         console.log("Logged in user ID:", user.$id);
       } catch (err) {
         console.error("Error fetching current user:", err);
-        // If in development, use a mock ID
-        if (import.meta.env.DEV) {
-          const mockId = 'user123';
-          console.warn(`Using mock user ID: ${mockId} for development`);
-          setUserId(mockId);
-        } else {
-          setError("Please log in to view your listings");
-          setLoading(false);
-        }
+        setError("Please log in to view your listings");
+        setLoading(false);
       }
     };
     
     getCurrentUser();
   }, []);
 
-  // First check the available fields in the collection schema
   useEffect(() => {
     const checkCollectionFields = async () => {
       try {
@@ -52,28 +43,24 @@ const Dashboard = () => {
           return;
         }
 
-        // Replace the getCollection call with listDocuments to get schema info
         const response = await databases.listDocuments(
           DATABASES.MAIN,
           COLLECTIONS.LISTINGS,
-          [Query.limit(1)] // Just get one document to inspect fields
+          [Query.limit(1)]
         );
         
-        // Extract field names from the first document if available
         if (response.documents && response.documents.length > 0) {
           const sampleDoc = response.documents[0];
           const fieldNames = Object.keys(sampleDoc);
           console.log("Available fields in collection:", fieldNames);
           setAvailableFields(fieldNames);
         } else {
-          // If no documents exist yet, set some default fields
           const defaultFields = ['$id', '$createdAt', '$updatedAt', 'title', 'description', 'status'];
           console.log("No documents found. Using default fields:", defaultFields);
           setAvailableFields(defaultFields);
         }
       } catch (err) {
         console.error("Error fetching collection schema:", err);
-        // Set some default fields to continue
         const fallbackFields = ['$createdAt', '$updatedAt'];
         setAvailableFields(fallbackFields);
         console.log("Using fallback fields after error:", fallbackFields);
@@ -85,25 +72,20 @@ const Dashboard = () => {
   
   useEffect(() => {
     const fetchUserListings = async () => {
-      // Only fetch if we have a userId
       if (!userId) return;
       
       setLoading(true);
       setError(null);
       
       try {
-        // Calculate offset for pagination
         const offset = (currentPage - 1) * flatsPerPage;
         
-        // Create base queries
         const queries = [
           Query.equal('userId', [userId]),
           Query.limit(flatsPerPage),
           Query.offset(offset)
         ];
 
-        // Add sort order if the field exists
-        // We'll try several options for date fields that might exist
         if (availableFields) {
           if (availableFields.includes('createdAt')) {
             queries.push(Query.orderDesc('createdAt'));
@@ -146,12 +128,10 @@ const Dashboard = () => {
     fetchUserListings();
   }, [currentPage, availableFields, userId]);
 
-  // Handler for marking a flat as booked/available
   const handleStatusChange = async (flatId, isAvailable) => {
     try {
       setLoading(true);
       
-      // Update isAvailable in Appwrite
       await databases.updateDocument(
         DATABASES.MAIN,
         COLLECTIONS.LISTINGS,
@@ -159,7 +139,6 @@ const Dashboard = () => {
         { isAvailable }
       );
         
-      // Update UI after successful database update
       setUserFlats(flats => 
         flats.map(flat => 
           flat.$id === flatId ? {...flat, isAvailable} : flat
@@ -174,9 +153,7 @@ const Dashboard = () => {
     }
   };
   
-  // Handler for deleting a flat
   const handleDelete = async (flatId) => {
-    // Confirm deletion
     if (!confirm("Are you sure you want to delete this listing?")) {
       return;
     }
@@ -184,20 +161,16 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // Delete the flat from Appwrite
       await databases.deleteDocument(
         DATABASES.MAIN,
         COLLECTIONS.LISTINGS,
         flatId
       );
       
-      // Update UI after successful deletion
       setUserFlats(flats => flats.filter(flat => flat.$id !== flatId));
       setTotalFlats(prev => prev - 1);
       setTotalPages(Math.ceil((totalFlats - 1) / flatsPerPage));
       
-      // If we deleted the last item on the current page and it's not the first page,
-      // go back one page
       if (userFlats.length === 1 && currentPage > 1) {
         setCurrentPage(prev => prev - 1);
       }
@@ -210,17 +183,14 @@ const Dashboard = () => {
     }
   };
 
-  // Navigate to post flat page
   const navigateToPostFlat = () => {
     navigate('/post-flat');
   };
   
-  // Navigate to edit flat page
   const handleEditFlat = (flatId) => {
     navigate(`/edit-flat/${flatId}`);
   };
 
-  // Pagination handlers
   const goToNextPage = () => {
     if (currentPage < totalPages) {
       setCurrentPage(prev => prev + 1);
@@ -233,7 +203,6 @@ const Dashboard = () => {
     }
   };
 
-  // Helper function to render flat cards
   const renderFlatCard = (flat) => {
     return (
       <FlatCard
@@ -250,15 +219,6 @@ const Dashboard = () => {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <h1 className="text-3xl font-bold text-textDark mb-2">My Dashboard</h1>
       <p className="text-gray-600 mb-8">Manage your property listings</p>
-      
-      {import.meta.env.DEV && userId && (
-        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-          <p className="text-blue-800 font-medium">Development Mode</p>
-          <p className="text-blue-600 text-sm">
-            Using userId: {userId} to fetch your listings.
-          </p>
-        </div>
-      )}
 
       {!userId && !loading ? (
         <div className="text-center py-12 bg-white rounded-lg shadow-sm">
@@ -272,7 +232,6 @@ const Dashboard = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Main content area - listings */}
           <div className="lg:col-span-3">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-semibold text-textDark">My Listed Properties</h2>
@@ -303,7 +262,6 @@ const Dashboard = () => {
               <div className="space-y-4">
                 {userFlats.map(flat => renderFlatCard(flat))}
 
-                {/* Pagination controls */}
                 {totalPages > 1 && (
                   <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
                     <div className="text-sm text-gray-600">
@@ -344,7 +302,6 @@ const Dashboard = () => {
             )}
           </div>
           
-          {/* Sidebar - statistics and quick actions */}
           <div className="lg:col-span-1">
             <DashboardStats flats={userFlats} />
             

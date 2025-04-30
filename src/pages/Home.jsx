@@ -6,9 +6,9 @@ import useLocation from '../hooks/useLocation';
 import { filterByDistance } from '../utils/geoUtils';
 import { flatsDb } from '../services/appwrite';
 import { Query } from 'appwrite';
+import LoginModal from '../components/LoginModal';
 
 const Home = () => {
-  // State for listings and filters
   const [listings, setListings] = useState([]);
   const [filteredListings, setFilteredListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,10 +21,13 @@ const Home = () => {
     propertyType: 'Any',
     sortBy: 'Newest',
     nearMe: false,
-    maxDistance: 10 // in km
+    maxDistance: 10
   });
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const ITEMS_PER_PAGE = 12;
 
-  // Get user location using our custom hook - autoRequest will trigger on component mount
   const { 
     location: userLocation, 
     getCurrentPosition, 
@@ -34,25 +37,20 @@ const Home = () => {
     isDefaultLocation
   } = useLocation({ autoRequest: true });
 
-  // Fetch listings from Appwrite
   useEffect(() => {
     const fetchListings = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        // Define queries based on current filters
         const queries = [
-          // Add isAvailable filter
           Query.equal('isAvailable', true)
         ];
         
-        // Add a query for property type
         if (filters.propertyType !== 'Any') {
           queries.push(Query.equal('type', filters.propertyType));
         }
         
-        // Add price range queries
         if (filters.minPrice > 0) {
           queries.push(Query.greaterThanEqual('rent', filters.minPrice));
         }
@@ -60,26 +58,45 @@ const Home = () => {
         if (filters.maxPrice < 100000) {
           queries.push(Query.lessThanEqual('rent', filters.maxPrice));
         }
+
+        if (filters.location.trim()) {
+          const searchTerms = filters.location.trim().toLowerCase().split(' ');
+          const andQueries = searchTerms.map(term =>
+            Query.or([
+              Query.search('address', term),
+              Query.search('title', term),
+              Query.search('type', term)
+            ])
+          );
+          queries.push(Query.and(andQueries));
+        }
+
+        switch(filters.sortBy) {
+          case 'Lowest Price':
+            queries.push(Query.orderAsc('rent'));
+            break;
+          case 'Highest Price':
+            queries.push(Query.orderDesc('rent'));
+            break;
+          case 'Newest':
+          default:
+            queries.push(Query.orderDesc('$createdAt'));
+            break;
+        }
         
-        // Fetch listings from Appwrite with queries
         const response = await flatsDb.getAllFlats(queries);
         
-        // Check if response has expected structure with documents array
         const documentsArray = response?.documents || [];
         
         if (!Array.isArray(documentsArray)) {
-          console.error('Unexpected response format:', response);
           throw new Error('Invalid data format received from server');
         }
         
-        // Process and format listings
         const formattedListings = documentsArray.map(item => {
-          // Handle both Appwrite document format and fallback format
           const id = item.$id || item.id;
           const title = item.title || '';
           const price = item.rent || item.price || 0;
           
-          // Handle location object which might be nested differently
           let locationObj = { latitude: 0, longitude: 0, address: 'Unknown' };
           if (item.location) {
             if (typeof item.location === 'object') {
@@ -92,7 +109,6 @@ const Home = () => {
               locationObj.address = item.location;
             }
           } else if (item.latitude && item.longitude) {
-            // If location is stored as separate fields
             locationObj = {
               latitude: item.latitude || 0,
               longitude: item.longitude || 0,
@@ -102,17 +118,25 @@ const Home = () => {
           
           return {
             ...item,
-            id, // Ensure id is available at top level
+            id,
             title,
             price, 
             location: locationObj
           };
         });
-        
-        setListings(formattedListings);
-        setFilteredListings(formattedListings);
+
+        let filteredResults = formattedListings;
+        if (filters.nearMe && userLocation) {
+          filteredResults = filterByDistance(filteredResults, userLocation, filters.maxDistance);
+          if (filters.sortBy === 'Nearest') {
+            filteredResults.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+          }
+        }
+
+        setListings(filteredResults);
+        setFilteredListings(filteredResults.slice(0, page * ITEMS_PER_PAGE));
+        setHasMore(filteredResults.length > page * ITEMS_PER_PAGE);
       } catch (err) {
-        console.error('Error fetching listings:', err);
         setError('Failed to load listings. Please try again later.');
       } finally {
         setLoading(false);
@@ -120,67 +144,12 @@ const Home = () => {
     };
 
     fetchListings();
-  }, [filters.propertyType, filters.minPrice, filters.maxPrice]);
+  }, [filters, userLocation, page]);
 
-  // Apply client-side filters when filters state or listings change
-  useEffect(() => {
-    if (listings.length === 0) return;
-
-    let result = [...listings];
-
-    // We already filter by property type and price range in the API query
-    // So only apply additional filters here that weren't part of the API query
-
-    // Filter by location search text
-    if (filters.location.trim()) {
-      const searchTerm = filters.location.toLowerCase();
-      result = result.filter(
-        item => {
-          const address = item.location?.address || item.address || '';
-          return address.toLowerCase().includes(searchTerm);
-        }
-      );
-    }
-
-    // Filter by distance if "Near Me" is active and we have user location
-    if (filters.nearMe && userLocation) {
-      result = filterByDistance(result, userLocation, filters.maxDistance);
-    }
-
-    // Apply sorting
-    switch(filters.sortBy) {
-      case 'Lowest Price':
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case 'Highest Price':
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case 'Nearest':
-        if (userLocation) {
-          // The filterByDistance already adds distance property
-          result.sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
-        }
-        break;
-      case 'Newest':
-      default:
-        // Sort by createdAt if available (newest first)
-        result.sort((a, b) => {
-          const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
-          const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
-          return dateB - dateA;
-        });
-        break;
-    }
-
-    setFilteredListings(result);
-  }, [filters.location, filters.nearMe, filters.maxDistance, filters.sortBy, listings, userLocation]);
-
-  // Handle filter changes
   const handleFilterChange = (newFilters) => {
     setFilters({ ...filters, ...newFilters });
   };
 
-  // Handle "Near Me" button click
   const handleNearMeClick = () => {
     if (!userLocation) {
       getCurrentPosition();
@@ -188,19 +157,22 @@ const Home = () => {
     setFilters(prev => ({ ...prev, nearMe: !prev.nearMe }));
   };
 
-  // Close location prompt
   const handleCloseLocationPrompt = () => {
     setShowLocationPrompt(false);
   };
 
-  // Try again to get location
   const handleTryAgain = () => {
     getCurrentPosition();
   };
 
+  const loadMore = () => {
+    setPage(prev => prev + 1);
+  };
+
   return (
     <div className="">
-      {/* Location Permission Prompt */}
+      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+      
       {showLocationPrompt && permissionStatus !== 'granted' && (
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
@@ -245,7 +217,6 @@ const Home = () => {
         </motion.div>
       )}
 
-      {/* Hero Section */}
       <section
         className="relative bg-cover bg-center py-20 mb-12"
         style={{ backgroundImage: 'url(https://images.pexels.com/photos/271618/pexels-photo-271618.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2)' }}
@@ -255,7 +226,7 @@ const Home = () => {
           <motion.img 
             src="/icon.png" 
             alt="Icon" 
-            className="w-32 h-32 mx-auto mb-4 rounded-full"
+            className="w-32 h-32 mx-auto mb-4 "
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5 }}
@@ -277,9 +248,17 @@ const Home = () => {
             Flat, Room, PG or Hostel – All in One Place
           </motion.p>
         </div>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className=" hidden sm:block sm:absolute bottom-4 right-4 text-white text-sm cursor-pointer hover:underline"
+          onClick={() => setShowLoginModal(true)}
+        >
+          Register as owner to post your flats, rooms and PGs →
+        </motion.p>
       </section>
 
-      {/* Filter Bar */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
         <FilterBar 
           filters={filters} 
@@ -300,19 +279,17 @@ const Home = () => {
         )}
       </section>
 
-      {/* Listings Grid */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-textDark">
             {filters.nearMe && userLocation ? 'Nearby Listings' : 'Featured Listings'}
-            {import.meta.env.DEV && listings.length > 0 && listings[0].id && ' (Development Mode)'}
           </h2>
           <span className="text-textLight">
-            {filteredListings.length} {filteredListings.length === 1 ? 'property' : 'properties'} found
+            {listings.length} {listings.length === 1 ? 'property' : 'properties'} found
           </span>
         </div>
         
-        {loading ? (
+        {loading && page === 1 ? (
           <div className="flex flex-col items-center justify-center py-10 space-y-4">
             <div className="w-12 h-12 border-4 border-gray-200 rounded-full border-t-primary animate-spin"></div>
             <p className="text-textLight">Loading listings, please wait...</p>
@@ -328,38 +305,44 @@ const Home = () => {
             </button>
           </div>
         ) : filteredListings.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {filteredListings.map((listing) => (
-              <Card key={listing.id || listing.$id} listing={listing} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {filteredListings.map((listing) => (
+                <Card key={listing.id} listing={listing} />
+              ))}
+            </div>
+            {hasMore && (
+              <div className="flex justify-center mt-8">
+                <button
+                  onClick={loadMore}
+                  className="px-6 py-2 bg-primary text-white rounded-md hover:bg-red-700 transition duration-200"
+                  disabled={loading}
+                >
+                  {loading ? 'Loading...' : 'Load More'}
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center py-10 bg-white rounded-lg shadow-sm">
             <p className="text-xl text-textLight">No listings found matching your criteria.</p>
             <button 
-              onClick={() => setFilters({
-                location: '',
-                maxPrice: 100000,
-                minPrice: 0,
-                propertyType: 'Any',
-                sortBy: 'Newest',
-                nearMe: false,
-                maxDistance: 10
-              })}
+              onClick={() => {
+                setPage(1);
+                setFilters({
+                  location: '',
+                  maxPrice: 100000,
+                  minPrice: 0,
+                  propertyType: 'Any',
+                  sortBy: 'Newest',
+                  nearMe: false,
+                  maxDistance: 10
+                });
+              }}
               className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-red-700 transition duration-200"
             >
               Reset Filters
             </button>
-          </div>
-        )}
-        
-        {import.meta.env.DEV && !error && listings.length > 0 && listings[0].id && (
-          <div className="mt-10 p-4 bg-blue-50 rounded-lg border border-blue-100">
-            <p className="text-blue-800 font-medium">Development Mode</p>
-            <p className="text-blue-600 text-sm mt-1">
-              You're seeing placeholder data because the Appwrite connection is not configured properly.
-              Please check your environment variables.
-            </p>
           </div>
         )}
       </section>

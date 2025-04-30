@@ -36,10 +36,25 @@ const Card = ({ listing }) => {
     return 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8YXBhcnRtZW50fGVufDB8fDB8fA%3D%3D&auto=format&fit=crop&w=500&q=60';
   };
 
-  // Handle location which could be either a string or an object with lat/lng
-  const locationDisplay = typeof listing.location === 'object' 
-    ? (listing.location.address || 'View on map') 
-    : (listing.location || listing.address || 'Unknown Location');
+  // Improved location display logic
+  const getLocationDisplay = (listing) => {
+    // First check the address field directly
+    if (listing.address) return listing.address;
+    
+    // Then check nested location object
+    if (listing.location) {
+      if (typeof listing.location === 'object' && listing.location.address) {
+        return listing.location.address;
+      }
+      if (typeof listing.location === 'string') {
+        return listing.location;
+      }
+    }
+    
+    return 'Location not specified';
+  };
+
+  const locationDisplay = getLocationDisplay(listing);
 
   const imageUrl = getImageUrl();
 

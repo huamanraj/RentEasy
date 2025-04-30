@@ -221,25 +221,21 @@ const FlatForm = ({ onSubmit, isSubmitting = false, initialData = null, isEditMo
     e.preventDefault();
     setError('');
     
-    // Basic validation
     if (!formData.title || !formData.rent || !formData.address || !formData.type) {
       setError('Please fill out all required fields');
       return;
     }
     
-    // Validate images (at least one required)
-    if (!formData.images || formData.images.length === 0) {
+    if (!isEditMode && (!formData.images || formData.images.length === 0)) {
       setError('Please upload at least one image');
       return;
     }
     
-    // Validate phone number
     if (!formData.ownerNumber) {
       setError('Please provide a contact number');
       return;
     }
     
-    // Basic phone number validation (10 digits)
     const phoneRegex = /^\d{10}$/;
     if (!phoneRegex.test(formData.ownerNumber)) {
       setError('Please enter a valid 10-digit phone number');
@@ -248,7 +244,6 @@ const FlatForm = ({ onSubmit, isSubmitting = false, initialData = null, isEditMo
     
     try {
       if (onSubmit) {
-        // Pass the upload progress callback function
         await onSubmit(formData, (filename, progress) => {
           setUploadProgress(prev => ({
             ...prev,
@@ -256,9 +251,6 @@ const FlatForm = ({ onSubmit, isSubmitting = false, initialData = null, isEditMo
           }));
         });
       }
-      
-      // Form submission is handled in the parent component
-      // Reset will happen after successful submission
     } catch (err) {
       setError(err.message || 'Failed to post property. Please try again.');
     }

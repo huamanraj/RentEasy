@@ -11,54 +11,36 @@ const ImageGallery = ({ images = [], video = null }) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   
-  // Process images and video URLs
   useEffect(() => {
     const processMedia = () => {
-      console.log("Loading media from images:", images);
-      console.log("Loading media from video:", video);
-      console.log("Using buckets - Images:", STORAGE?.IMAGES, "Videos:", STORAGE?.VIDEOS);
-      
-      // Process images - extract file IDs or use direct URLs
       const processedImages = (images || []).map(image => {
-        // Case 1: Image is already a full URL
         if (typeof image === 'string' && image.startsWith('http')) {
-          // Check if it's already an Appwrite URL with duplicate paths
           if (image.includes('/storage/buckets/') && image.includes('/files/http')) {
-            // Extract the file ID from the URL
             const matches = image.match(/files\/([^\/]+)\/view/);
             if (matches && matches[1] && STORAGE?.IMAGES) {
-              // Regenerate a clean URL
               return storage.getFileView(STORAGE.IMAGES, matches[1]);
             }
           }
           return image;
         }
         
-        // Case 2: Image is a file ID string and we have bucket ID
         if (typeof image === 'string' && STORAGE?.IMAGES) {
           return storage.getFileView(STORAGE.IMAGES, image);
         }
         
-        // Case 3: Image is an object with file ID
         if (typeof image === 'object' && image.fileId && STORAGE?.IMAGES) {
           return storage.getFileView(STORAGE.IMAGES, image.fileId);
         }
         
-        // Fallback - return whatever we have
         return image;
       });
       
-      // Process video - extract file ID or use direct URL
       let processedVideo = null;
       if (video) {
-        // Case 1: Video is already a full URL
         if (typeof video === 'string' && video.startsWith('http')) {
-          // Check if it's already an Appwrite URL with duplicate paths
           if (video.includes('/storage/buckets/') && video.includes('/files/http')) {
-            // Extract the file ID from the URL
             const matches = video.match(/files\/([^\/]+)\/view/);
             if (matches && matches[1] && STORAGE?.VIDEOS) {
-              // Regenerate a clean URL
               processedVideo = storage.getFileView(STORAGE.VIDEOS, matches[1]);
             } else {
               processedVideo = video;
@@ -67,37 +49,28 @@ const ImageGallery = ({ images = [], video = null }) => {
             processedVideo = video;
           }
         }
-        // Case 2: Video is a file ID string and we have bucket ID
         else if (typeof video === 'string' && STORAGE?.VIDEOS) {
           processedVideo = storage.getFileView(STORAGE.VIDEOS, video);
         }
-        // Case 3: Video is an object with file ID
         else if (typeof video === 'object' && video.fileId && STORAGE?.VIDEOS) {
           processedVideo = storage.getFileView(STORAGE.VIDEOS, video.fileId);
         }
-        // Fallback
         else {
           processedVideo = video;
         }
       }
       
-      console.log("Processed image URLs:", processedImages);
-      console.log("Processed video URL:", processedVideo);
-      
-      // Create the final media items array
       const items = [...processedImages];
       if (processedVideo) {
         items.push({ type: 'video', url: processedVideo });
       }
       
-      console.log("Final media items:", items);
       setMediaItems(items);
     };
 
     processMedia();
   }, [images, video]);
 
-  // No media to display
   if (mediaItems.length === 0) {
     return (
       <div className="aspect-[16/9] bg-gray-200 rounded-xl flex items-center justify-center">
@@ -106,37 +79,31 @@ const ImageGallery = ({ images = [], video = null }) => {
     );
   }
   
-  // Check if current item is a video
   const isCurrentItemVideo = () => {
     return typeof mediaItems[currentIndex] === 'object' && mediaItems[currentIndex]?.type === 'video';
   };
 
-  // Navigate to previous image
   const prevImage = () => {
     setCurrentIndex((prev) => (prev === 0 ? mediaItems.length - 1 : prev - 1));
     setShowVideo(false);
   };
 
-  // Navigate to next image
   const nextImage = () => {
     setCurrentIndex((prev) => (prev === mediaItems.length - 1 ? 0 : prev + 1));
     setShowVideo(false);
   };
 
-  // Open lightbox
   const openLightbox = (index) => {
     setLightboxIndex(index);
     setLightboxOpen(true);
-    document.body.style.overflow = 'hidden'; // Prevent scrolling
+    document.body.style.overflow = 'hidden';
   };
 
-  // Close lightbox
   const closeLightbox = () => {
     setLightboxOpen(false);
-    document.body.style.overflow = 'auto'; // Re-enable scrolling
+    document.body.style.overflow = 'auto';
   };
 
-  // Get current media item
   const getCurrentMediaItem = () => {
     const item = mediaItems[currentIndex];
     if (typeof item === 'object' && item.type === 'video') {
@@ -173,7 +140,6 @@ const ImageGallery = ({ images = [], video = null }) => {
     );
   };
 
-  // Render thumbnails
   const renderThumbnails = () => {
     return (
       <div className="flex space-x-2 mt-4 overflow-x-auto pb-2">
@@ -220,7 +186,6 @@ const ImageGallery = ({ images = [], video = null }) => {
     );
   };
 
-  // Render lightbox
   const renderLightbox = () => {
     if (!lightboxOpen) return null;
     
@@ -286,16 +251,13 @@ const ImageGallery = ({ images = [], video = null }) => {
     );
   };
 
-  // Main render
   return (
     <div className="space-y-2">
-      {/* Main Image/Video Display */}
       <div className="aspect-[16/9] relative bg-gray-100 rounded-xl overflow-hidden">
         {mediaItems.length > 0 && (
           <>
             {getCurrentMediaItem()}
             
-            {/* Navigation controls */}
             {mediaItems.length > 1 && (
               <>
                 <button 
@@ -319,10 +281,8 @@ const ImageGallery = ({ images = [], video = null }) => {
         )}
       </div>
       
-      {/* Thumbnails */}
       {mediaItems.length > 1 && renderThumbnails()}
       
-      {/* Lightbox */}
       {renderLightbox()}
     </div>
   );

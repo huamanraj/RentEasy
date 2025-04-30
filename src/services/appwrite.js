@@ -1,19 +1,15 @@
 import { Client, Databases, Account, Query, Storage, ID } from 'appwrite';
 
-// Initialize Appwrite
 const client = new Client();
 
-// Use the environment variables properly
 client
   .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1')
   .setProject(import.meta.env.VITE_APPWRITE_PROJECT_ID);
 
-// Export Appwrite services
 export const account = new Account(client);
 export const databases = new Databases(client);
 export const storage = new Storage(client);
 
-// Database and collection IDs from environment variables
 export const DATABASES = {
   MAIN: import.meta.env.VITE_APPWRITE_DATABASE_ID,
 };
@@ -28,7 +24,6 @@ export const STORAGE = {
   VIDEOS: import.meta.env.VITE_APPWRITE_FLAT_VIDEOS_BUCKET_ID,
 };
 
-// Sample data to use as fallback in development mode
 const FALLBACK_LISTINGS = [
   { 
     id: 1, 
@@ -97,23 +92,16 @@ const FALLBACK_LISTINGS = [
   },
 ];
 
-// Helper function to get all listings
 export async function getAllListings(queries = []) {
   try {
-    // Check if all required environment variables are set
     if (!DATABASES.MAIN || !COLLECTIONS.LISTINGS) {
-      console.warn('Appwrite config incomplete - using fallback data');
       return getFallbackListings(queries);
     }
 
-    // Create a safe copy of queries, filtering out any that might cause issues
     const safeQueries = queries.filter(query => {
-      // Filter out queries for fields that might not exist
       if (query.method === 'orderDesc' || query.method === 'orderAsc') {
-        // These are the most likely fields to be missing, so we check for them
         if (['createdAt', 'updatedAt'].includes(query.attribute) && 
             !fieldExists(query.attribute, DATABASES.MAIN, COLLECTIONS.LISTINGS)) {
-          console.warn(`Skipping sort by ${query.attribute} as it may not exist in schema`);
           return false;
         }
       }
@@ -128,9 +116,6 @@ export async function getAllListings(queries = []) {
     
     return response;
   } catch (error) {
-    console.error('Appwrite service :: getAllListings :: ', error);
-    
-    // Only use fallback data in development
     if (import.meta.env.DEV) {
       return getFallbackListings(queries);
     }
@@ -139,12 +124,7 @@ export async function getAllListings(queries = []) {
   }
 }
 
-// Helper function to check if a field exists in the schema
-// Note: This is just a placeholder - we can't actually check this way in the client
-// The actual field checking should happen at component level by first fetching the schema
 function fieldExists(field, databaseId, collectionId) {
-  // This would ideally fetch the schema and check if the field exists
-  // But for now, we'll just assume common fields exist
   const commonFields = [
     '$id', '$createdAt', '$updatedAt', 'title', 'description', 
     'price', 'rent', 'address', 'type', 'status', 'userId'
@@ -153,21 +133,19 @@ function fieldExists(field, databaseId, collectionId) {
   return commonFields.includes(field);
 }
 
-// Function to filter fallback listings based on queries
 function getFallbackListings(queries = []) {
-  console.log('Using fallback data for listings in development mode');
-  // Filter the fallback data based on basic criteria when possible
-  let filteredData = [...FALLBACK_LISTINGS];
+  let filteredData = FALLBACK_LISTINGS.map(item => ({
+    ...item,
+    address: item.address || item.location?.address || 'Unknown'
+  }));
   
-  // Create a more robust sample set with userId for testing
   const enhancedData = filteredData.map((item, index) => ({
     ...item,
-    userId: index < 3 ? 'user123' : 'otherUser', // First 3 items belong to user123
-    createdAt: new Date(Date.now() - index * 86400000).toISOString(), // Each one day apart
+    userId: index < 3 ? 'user123' : 'otherUser',
+    createdAt: new Date(Date.now() - index * 86400000).toISOString(),
     status: index % 3 === 0 ? 'Booked' : 'Listed'
   }));
   
-  // Apply some basic filtering from queries if possible
   let sortField = 'createdAt';
   let sortDirection = 'desc';
   let limit = enhancedData.length;
@@ -175,6 +153,17 @@ function getFallbackListings(queries = []) {
   let userIdFilter = null;
   
   queries.forEach(query => {
+    if (query.method === 'search' && query.attribute === 'address') {
+      const term = query.values?.[0]?.toLowerCase?.();
+      if (term) {
+        filteredData = filteredData.filter(item => {
+          const addr = (item.address || item.location?.address || '').toLowerCase();
+          return addr.includes(term);
+        });
+      }
+      return;
+    }
+
     if (query.method === 'equal' && query.attribute === 'type') {
       filteredData = filteredData.filter(item => item.type === query.values[0]);
     }
@@ -207,12 +196,10 @@ function getFallbackListings(queries = []) {
     }
   });
   
-  // Filter by userId if specified
   if (userIdFilter) {
     filteredData = enhancedData.filter(item => item.userId === userIdFilter);
   }
   
-  // Sort the data
   filteredData.sort((a, b) => {
     if (sortDirection === 'desc') {
       return a[sortField] < b[sortField] ? 1 : -1;
@@ -221,11 +208,9 @@ function getFallbackListings(queries = []) {
     }
   });
   
-  // Apply pagination
   const total = filteredData.length;
   const paginatedData = filteredData.slice(offset, offset + limit);
   
-  // Return in a format similar to Appwrite's response
   return {
     documents: paginatedData,
     total: total,
@@ -234,12 +219,9 @@ function getFallbackListings(queries = []) {
   };
 }
 
-// Helper function to get listing by ID
 export async function getListingById(id) {
   try {
-    // Check if all required environment variables are set
     if (!DATABASES.MAIN || !COLLECTIONS.LISTINGS) {
-      console.warn('Appwrite config incomplete - using fallback data');
       return getFallbackListingById(id);
     }
     
@@ -249,12 +231,8 @@ export async function getListingById(id) {
       id
     );
     
-    // Process and return the document
     return processListingDocument(document);
   } catch (error) {
-    console.error('Appwrite service :: getListingById :: ', error);
-    
-    // Only use fallback data in development
     if (import.meta.env.DEV) {
       return getFallbackListingById(id);
     }
@@ -263,9 +241,7 @@ export async function getListingById(id) {
   }
 }
 
-// Function to get fallback listing by ID
 function getFallbackListingById(id) {
-  console.log('Using fallback data for listing detail in development mode');
   const fallbackListing = FALLBACK_LISTINGS.find(item => item.id == id);
   if (fallbackListing) {
     return {
@@ -276,19 +252,16 @@ function getFallbackListingById(id) {
         'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2',
         'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267'
       ],
-      ownerNumber: '9876543210' // Add a fallback owner number for testing
+      ownerNumber: '9876543210'
     };
   }
   
   throw new Error('Listing not found');
 }
 
-// Helper function to get listings by user ID
 export async function getListingsByUserId(userId, limit = 10, offset = 0) {
   try {
-    // Check if all required environment variables are set
     if (!DATABASES.MAIN || !COLLECTIONS.LISTINGS) {
-      console.warn('Appwrite config incomplete - using fallback data');
       return getFallbackUserListings(limit, offset);
     }
     
@@ -304,9 +277,6 @@ export async function getListingsByUserId(userId, limit = 10, offset = 0) {
     
     return response;
   } catch (error) {
-    console.error('Appwrite service :: getListingsByUserId :: ', error);
-    
-    // Only use fallback data in development
     if (import.meta.env.DEV) {
       return getFallbackUserListings(limit, offset);
     }
@@ -315,10 +285,7 @@ export async function getListingsByUserId(userId, limit = 10, offset = 0) {
   }
 }
 
-// Function to get fallback user listings
 function getFallbackUserListings(limit = 10, offset = 0) {
-  console.log('Using fallback data for user listings in development mode');
-  // Generate more sample data for pagination testing
   const fallbackData = [
     { 
       $id: 'mock1',
@@ -427,7 +394,6 @@ function getFallbackUserListings(limit = 10, offset = 0) {
     }
   ];
   
-  // Apply pagination
   const paginatedData = fallbackData.slice(offset, offset + limit);
   
   return { 
@@ -438,39 +404,25 @@ function getFallbackUserListings(limit = 10, offset = 0) {
   };
 }
 
-// Helper function to process listing document and handle image/video URLs
 function processListingDocument(document) {
-  // Make a copy to avoid mutating the original
   const processedDoc = {...document};
   
-  // Handle images - convert file IDs to URLs if needed
   if (processedDoc.images && Array.isArray(processedDoc.images)) {
-    // First filter out any null or undefined values
     processedDoc.images = processedDoc.images.filter(image => image);
-    
-    // These are already proper file IDs as they come directly from the database
-    // We'll let the components handle the URL generation to avoid double-encoding issues
   }
-  
-  // We'll also let the components handle the video URL generation
   
   return processedDoc;
 }
 
-// Create a flat listing
 export async function createListing(flatData, onProgress) {
   try {
-    // Check if all required environment variables are set
     if (!DATABASES.MAIN || !COLLECTIONS.LISTINGS) {
-      console.warn('Appwrite config incomplete - cannot create listing');
       throw new Error('Application not properly configured for data storage');
     }
     
-    // First upload any images and video
     const imageIds = [];
     const imageFiles = flatData.images || [];
     
-    // Upload images one by one and track IDs
     for (const imageFile of imageFiles) {
       try {
         if (onProgress) {
@@ -481,7 +433,7 @@ export async function createListing(flatData, onProgress) {
           STORAGE.IMAGES,
           ID.unique(),
           imageFile,
-          ['*'], // Public read permissions
+          ['*'],
           onProgress ? (progress) => {
             onProgress(imageFile.name, progress.progress);
           } : undefined
@@ -490,7 +442,6 @@ export async function createListing(flatData, onProgress) {
         imageIds.push(response.$id);
       } catch (err) {
         console.error('Error uploading image:', err);
-        // Continue with other images even if one fails
       }
     }
     
@@ -505,7 +456,7 @@ export async function createListing(flatData, onProgress) {
           STORAGE.VIDEOS,
           ID.unique(),
           flatData.video,
-          ['*'], // Public read permissions
+          ['*'],
           onProgress ? (progress) => {
             onProgress(flatData.video.name, progress.progress);
           } : undefined
@@ -514,11 +465,9 @@ export async function createListing(flatData, onProgress) {
         videoId = response.$id;
       } catch (err) {
         console.error('Error uploading video:', err);
-        // Continue even if video upload fails
       }
     }
     
-    // Prepare data for database
     const listingData = {
       title: flatData.title,
       rent: parseFloat(flatData.rent),
@@ -531,13 +480,12 @@ export async function createListing(flatData, onProgress) {
       longitude: flatData.longitude || null,
       images: imageIds,
       video: videoId,
-      isAvailable: flatData.isAvailable !== false, // Default to true
-      userId: flatData.userId || 'anonymous', // Should be replaced with actual user ID
+      isAvailable: flatData.isAvailable !== false,
+      userId: flatData.userId || 'anonymous',
       createdAt: new Date().toISOString(),
-      ownerNumber: flatData.ownerNumber || null, // Add owner's phone number
+      ownerNumber: flatData.ownerNumber || null,
     };
     
-    // Create document in database
     const response = await databases.createDocument(
       DATABASES.MAIN,
       COLLECTIONS.LISTINGS,
@@ -547,14 +495,26 @@ export async function createListing(flatData, onProgress) {
     
     return response;
   } catch (error) {
-    console.error('Appwrite service :: createListing :: ', error);
     throw error;
   }
 }
 
-// Create a unified service for flat operations
 export const flatsDb = {
-  getAllFlats: getAllListings,
+  getAllFlats: async (queries = []) => {
+    try {
+      const validQueries = queries.filter(q => q !== undefined && q !== null);
+      
+      const response = await databases.listDocuments(
+        DATABASES.MAIN,
+        COLLECTIONS.LISTINGS,
+        validQueries
+      );
+      
+      return response;
+    } catch (error) {
+      throw new Error('Failed to fetch listings');
+    }
+  },
   getFlat: getListingById,
   getUserFlats: getListingsByUserId,
   createFlat: createListing,

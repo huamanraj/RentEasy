@@ -7,7 +7,7 @@ import { ID, Query } from 'appwrite';
 import toast from 'react-hot-toast';
 
 const ReviewSection = ({ flatId }) => {
-  const { user } = useAuth(); // Get user status
+  const { user } = useAuth();
   const [newReview, setNewReview] = useState({ rating: 5, reviewText: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reviews, setReviews] = useState([]);
@@ -85,7 +85,6 @@ const ReviewSection = ({ flatId }) => {
 
     setIsSubmitting(true);
     try {
-      // Create review document with only the schema-defined attributes
       const reviewData = {
         flatId: flatId,
         userId: user.$id,
@@ -104,7 +103,7 @@ const ReviewSection = ({ flatId }) => {
       toast.success('Review submitted successfully!');
       setNewReview({ rating: 5, reviewText: '' });
       setHasUserReviewed(true);
-      fetchReviews(1); // Refresh reviews
+      fetchReviews(1);
     } catch (error) {
       console.error("Error submitting review:", error);
       toast.error('Failed to submit review. Please try again.');
@@ -117,12 +116,10 @@ const ReviewSection = ({ flatId }) => {
     return <div className="flex justify-center py-8">Loading reviews...</div>;
   }
 
-  // Calculate overall rating
   const overallRating = reviews.length > 0
     ? (reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length).toFixed(1)
     : 'N/A';
 
-  // Generate array of stars for rating input
   const renderStarInput = () => {
     return (
       <div className="flex space-x-1">
@@ -143,14 +140,12 @@ const ReviewSection = ({ flatId }) => {
     );
   };
 
-  // Calculate total pages
   const totalPages = Math.ceil(totalReviews / REVIEWS_PER_PAGE);
 
   return (
     <div className="space-y-6 bg-white p-6 rounded-lg shadow">
       <h2 className="text-2xl font-semibold text-textDark border-b pb-4">Reviews & Ratings</h2>
       
-      {/* Overall Rating Card */}
       <div className="bg-gray-50 p-4 rounded-lg flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="text-4xl font-bold text-primary">{overallRating}</div>
@@ -169,7 +164,6 @@ const ReviewSection = ({ flatId }) => {
         </div>
       </div>
 
-      {/* Review Form */}
       {user && !hasUserReviewed && (
         <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
           <h3 className="text-lg font-medium text-textDark mb-4">Write a Review</h3>
@@ -207,7 +201,6 @@ const ReviewSection = ({ flatId }) => {
         </div>
       )}
 
-      {/* Reviews List with Pagination */}
       <div className="space-y-4">
         {reviews.length > 0 ? (
           <>
@@ -239,7 +232,6 @@ const ReviewSection = ({ flatId }) => {
               ))}
             </div>
 
-            {/* Pagination Controls */}
             {totalPages > 1 && (
               <div className="flex justify-center items-center space-x-4 mt-8">
                 <button
@@ -272,7 +264,6 @@ const ReviewSection = ({ flatId }) => {
   );
 };
 
-// Update prop validation
 ReviewSection.propTypes = {
   flatId: PropTypes.string.isRequired,
 };

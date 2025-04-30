@@ -1,31 +1,12 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { Wifi, Car, MapPin, Phone } from 'lucide-react'; // Added Phone icon
+import { Wifi, Car, MapPin, Phone } from 'lucide-react';
 
 const FlatDetails = ({ flat }) => {
   if (!flat) {
     return <div>Loading flat details...</div>;
   }
 
-  // Console log for debugging
-  console.log("FlatDetails received flat data:", { 
-    hasOwnerNumber: Boolean(flat.ownerNumber),
-    ownerNumber: flat.ownerNumber,
-    flatKeys: Object.keys(flat)
-  });
-
-  // Handle both formats of images (array of strings or array of objects)
-  const getImageUrls = (images) => {
-    if (!images) return [];
-    
-    // Check if the images are objects with urls or direct strings
-    if (typeof images[0] === 'object' && images[0]?.url) {
-      return images.map(img => img.url);
-    }
-    return images; // Already array of strings
-  };
-
-  // Extract data from flat object with fallbacks
   const { 
     title, 
     price,
@@ -40,7 +21,6 @@ const FlatDetails = ({ flat }) => {
     ownerNumber
   } = flat;
 
-  // Get icon for amenity (simplified example)
   const getAmenityIcon = (amenity) => {
     const amenityLower = amenity.toLowerCase();
     if (amenityLower.includes('wifi')) return <Wifi size={16} />;
@@ -48,7 +28,6 @@ const FlatDetails = ({ flat }) => {
     return <span className="text-green-500">✓</span>;
   };
   
-  // Generate Google Maps URL if latitude/longitude exist
   const getGoogleMapsUrl = () => {
     if (googleMapLink) return googleMapLink;
     if (latitude && longitude) {
@@ -59,7 +38,6 @@ const FlatDetails = ({ flat }) => {
 
   const mapsUrl = getGoogleMapsUrl();
 
-  // Function to handle phone call
   const handleCallOwner = () => {
     if (ownerNumber) {
       window.location.href = `tel:${ownerNumber}`;
@@ -68,11 +46,9 @@ const FlatDetails = ({ flat }) => {
     }
   };
 
-  // Format phone number for display (add spaces for readability)
   const formatPhoneNumber = (number) => {
     if (!number) return '';
     const numStr = String(number);
-    // For a 10-digit number: XXX XXX XXXX
     if (numStr.length === 10) {
       return `${numStr.slice(0, 3)} ${numStr.slice(3, 6)} ${numStr.slice(6)}`;
     }
@@ -81,7 +57,6 @@ const FlatDetails = ({ flat }) => {
 
   return (
     <div className="space-y-8">
-      {/* Title and Basic Info */}
       <div>
         <h1 className="text-3xl font-bold text-textDark">{title || 'Flat Title'}</h1>
         <p className="text-lg text-textLight mt-1">{type || 'Property Type'}</p>
@@ -94,7 +69,6 @@ const FlatDetails = ({ flat }) => {
         )}
       </div>
 
-      {/* Call to Action Button - MOVED HERE */}
       <div className="pt-2">
         <button 
           onClick={handleCallOwner}
@@ -106,7 +80,6 @@ const FlatDetails = ({ flat }) => {
         </button>
       </div>
 
-      {/* Description */}
       <div>
         <h2 className="text-2xl font-semibold text-textDark mb-3">Description</h2>
         <p className="text-textLight leading-relaxed">
@@ -114,7 +87,6 @@ const FlatDetails = ({ flat }) => {
         </p>
       </div>
 
-      {/* Amenities */}
       <div>
         <h2 className="text-2xl font-semibold text-textDark mb-4">Amenities</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -127,7 +99,6 @@ const FlatDetails = ({ flat }) => {
         </div>
       </div>
 
-      {/* Google Map Embed */}
       <div>
         <h2 className="text-2xl font-semibold text-textDark mb-3">Location</h2>
         {mapsUrl ? (
@@ -149,25 +120,10 @@ const FlatDetails = ({ flat }) => {
           </div>
         )}
       </div>
-
-      {/* Debug info - only shown in development */}
-      {import.meta.env.DEV && !ownerNumber && (
-        <div className="mt-4 p-3 bg-yellow-50 text-yellow-700 text-sm rounded-lg">
-          <p className="font-medium">Developer Note:</p>
-          <p>Owner number is not available. Make sure:</p>
-          <ol className="list-decimal ml-5 mt-1 text-xs">
-            <li>The field is included in the database schema</li>
-            <li>The field is being passed correctly from the backend</li>
-            <li>You're using the latest API version</li>
-          </ol>
-          <p className="mt-1">Flat data keys: {Object.keys(flat).join(', ')}</p>
-        </div>
-      )}
     </div>
   );
 };
 
-// Update prop validation to include ownerNumber
 FlatDetails.propTypes = {
   flat: PropTypes.shape({
     title: PropTypes.string,
@@ -180,7 +136,7 @@ FlatDetails.propTypes = {
     latitude: PropTypes.number,
     longitude: PropTypes.number,
     googleMapLink: PropTypes.string,
-    ownerNumber: PropTypes.string, // Add owner number to prop types
+    ownerNumber: PropTypes.string,
     images: PropTypes.oneOfType([
       PropTypes.arrayOf(PropTypes.string),
       PropTypes.arrayOf(PropTypes.shape({

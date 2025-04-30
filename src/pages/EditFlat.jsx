@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { toast } from 'react-hot-toast'; // Add this import
+import { toast } from 'react-hot-toast';
 import FlatForm from '../components/FlatForm';
 import { flatsDb, fileStorage } from '../utils/appwrite';
 import { useAuth } from '../context/AuthContext';
@@ -15,13 +15,11 @@ const EditFlat = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Fetch flat data when component mounts
   useEffect(() => {
     const fetchFlatData = async () => {
       try {
         const data = await flatsDb.getFlat(id);
         
-        // Verify ownership
         if (data.userId !== user?.$id) {
           throw new Error("You don't have permission to edit this flat");
         }
@@ -40,7 +38,6 @@ const EditFlat = () => {
     }
   }, [id, user]);
 
-  // Handle form submission
   const handleSubmit = async (formData, progressCallback) => {
     setIsSubmitting(true);
     setError(null);
@@ -50,18 +47,15 @@ const EditFlat = () => {
         throw new Error("You must be logged in to edit a flat");
       }
       
-      // Show loading state in UI
       const loadingToast = toast.loading('Updating your flat...');
       
       const userId = user.$id;
 
-      // Handle image uploads if there are new images
-      const imageUrls = [...(flatData.images || [])]; // Start with existing images
+      const imageUrls = [...(flatData.images || [])];
       
-      // Upload any new images
       if (formData.images && formData.images.length > 0) {
         for (const imageFile of formData.images) {
-          if (imageFile instanceof File) { // Only upload if it's a new file
+          if (imageFile instanceof File) {
             try {
               const imageData = await fileStorage.uploadImage(imageFile, progressCallback, userId);
               imageUrls.push(imageData.id);
@@ -72,7 +66,6 @@ const EditFlat = () => {
         }
       }
       
-      // Handle video upload if there's a new video
       let videoId = flatData.video || null;
       if (formData.video && formData.video instanceof File) {
         try {
@@ -83,7 +76,6 @@ const EditFlat = () => {
         }
       }
       
-      // Prepare update data
       const updateData = {
         title: formData.title,
         rent: parseFloat(formData.rent),
@@ -98,10 +90,9 @@ const EditFlat = () => {
         video: videoId,
         isAvailable: formData.isAvailable !== false,
         ownerNumber: formData.ownerNumber || '',
-        userId: userId // Ensure userId is included
+        userId: userId
       };
       
-      // Update the document in Appwrite
       const updated = await databases.updateDocument(
         DATABASES.MAIN,
         COLLECTIONS.LISTINGS,
@@ -110,11 +101,9 @@ const EditFlat = () => {
       );
 
       if (updated) {
-        // Dismiss loading toast and show success
         toast.dismiss(loadingToast);
         toast.success('Flat updated successfully!');
         
-        // Navigate back to the flat details page after a short delay
         setTimeout(() => {
           navigate(`/flat/${id}`);
         }, 1000);
