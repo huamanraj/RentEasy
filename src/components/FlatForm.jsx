@@ -14,7 +14,7 @@ const FlatForm = ({ onSubmit, isSubmitting = false, initialData = null, isEditMo
     address: '',
     type: '',
     description: '',
-    amenities: [],
+    amenities: [], // ensure this is initialized as an empty array
     googleMapLink: '',
     images: [],
     video: null,
@@ -411,7 +411,7 @@ const FlatForm = ({ onSubmit, isSubmitting = false, initialData = null, isEditMo
                     id={amenity.toLowerCase().replace(' ', '_')}
                     name={amenity} 
                     type="checkbox"
-                    checked={formData.amenities.includes(amenity)}
+                    checked={formData.amenities?.includes(amenity) || false}
                     onChange={handleAmenityChange}
                     className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
                   />
