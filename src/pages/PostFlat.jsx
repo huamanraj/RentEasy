@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import FlatForm from '../components/FlatForm';
 import { flatsDb, fileStorage } from '../utils/appwrite';
 import { useAuth } from '../context/AuthContext';
@@ -11,11 +12,6 @@ const PostFlat = () => {
   const { user } = useAuth();
 
   const handlePostSubmit = async (formData, progressCallback) => {
-    if (!user.emailVerified) {
-      toast.error('Please verify your email before posting a property');
-      return;
-    }
-
     setIsSubmitting(true);
     setError(null);
     

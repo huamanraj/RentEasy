@@ -85,17 +85,12 @@ const FlatForm = ({ onSubmit, isSubmitting = false, initialData = null, isEditMo
 
   const handleAmenityChange = (e) => {
     const { checked, name } = e.target;
-    if (checked) {
-      setFormData(prevData => ({
-        ...prevData,
-        amenities: [...prevData.amenities, name]
-      }));
-    } else {
-      setFormData(prevData => ({
-        ...prevData,
-        amenities: prevData.amenities.filter(amenity => amenity !== name)
-      }));
-    }
+    setFormData(prevData => ({
+      ...prevData,
+      amenities: checked 
+        ? [...(prevData.amenities || []), name]
+        : (prevData.amenities || []).filter(amenity => amenity !== name)
+    }));
   };
 
   const handleImageChange = (e) => {
