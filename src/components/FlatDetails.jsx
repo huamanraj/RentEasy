@@ -144,7 +144,7 @@ const FlatDetails = ({ flat }) => {
               <iframe 
                 src={mapsUrl}
                 width="100%"
-                height="450"
+                height="300"
                 style={{ border: 0 }}
                 allowFullScreen={true}
                 loading="lazy"
