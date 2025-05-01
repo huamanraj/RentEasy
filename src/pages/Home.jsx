@@ -61,15 +61,13 @@ const Home = () => {
         }
 
         if (filters.location.trim()) {
-          const searchTerms = filters.location.trim().toLowerCase().split(' ');
-          const andQueries = searchTerms.map(term =>
+          const searchTerm = filters.location.trim().toLowerCase();
+          queries.push(
             Query.or([
-              Query.search('address', term),
-              Query.search('title', term),
-              Query.search('type', term)
+              Query.contains('title', [searchTerm]),
+              Query.contains('address', [searchTerm])
             ])
           );
-          queries.push(Query.and(andQueries));
         }
 
         switch(filters.sortBy) {
@@ -92,12 +90,11 @@ const Home = () => {
         if (!Array.isArray(documentsArray)) {
           throw new Error('Invalid data format received from server');
         }
-        
+
         const formattedListings = documentsArray.map(item => {
           const id = item.$id || item.id;
           const title = item.title || '';
           const price = item.rent || item.price || 0;
-          
           let locationObj = { latitude: 0, longitude: 0, address: 'Unknown' };
           if (item.location) {
             if (typeof item.location === 'object') {
@@ -116,7 +113,6 @@ const Home = () => {
               address: item.address || ''
             };
           }
-          
           return {
             ...item,
             id,
@@ -125,7 +121,7 @@ const Home = () => {
             location: locationObj
           };
         });
-
+        
         let filteredResults = formattedListings;
         if (filters.nearMe && userLocation) {
           filteredResults = filterByDistance(filteredResults, userLocation, filters.maxDistance);
@@ -133,7 +129,6 @@ const Home = () => {
             filteredResults.sort((a, b) => (a.distance || 0) - (b.distance || 0));
           }
         }
-
         setListings(filteredResults);
         setFilteredListings(filteredResults.slice(0, page * ITEMS_PER_PAGE));
         setHasMore(filteredResults.length > page * ITEMS_PER_PAGE);
@@ -177,9 +172,8 @@ const Home = () => {
   };
 
   return (
-    <div className="">
+    <div className=""> 
       <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
-      
       <LocationPromptDialog 
         isOpen={showLocationPrompt}
         onClose={handleCloseLocationPrompt}
@@ -219,16 +213,16 @@ const Home = () => {
           >
             Flat, Room, PG or Hostel – All in One Place
           </motion.p>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className=" hidden sm:block sm:absolute bottom-4 right-4 text-white text-sm cursor-pointer hover:underline"
+            onClick={() => setShowLoginModal(true)}
+          >
+            Register as owner to post your flats, rooms and PGs →
+          </motion.p>
         </div>
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className=" hidden sm:block sm:absolute bottom-4 right-4 text-white text-sm cursor-pointer hover:underline"
-          onClick={() => setShowLoginModal(true)}
-        >
-          Register as owner to post your flats, rooms and PGs →
-        </motion.p>
       </section>
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
