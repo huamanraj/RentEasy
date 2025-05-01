@@ -170,6 +170,7 @@ const FlatForm = ({ onSubmit, isSubmitting = false, initialData = null, isEditMo
   useEffect(() => {
     if (location && location.latitude && location.longitude) {
       setFormData(prevData => ({
+        ...prevData,
         latitude: location.latitude,
         longitude: location.longitude,
         location: {
