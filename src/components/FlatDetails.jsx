@@ -30,11 +30,35 @@ const FlatDetails = ({ flat }) => {
   };
   
   const getGoogleMapsUrl = () => {
-    if (googleMapLink) return googleMapLink;
-    if (latitude && longitude) {
-      return `https://www.google.com/maps?q=${latitude},${longitude}`;
+    if (!googleMapLink) {
+      if (latitude && longitude) {
+        return `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3000!2d${longitude}!3d${latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zM!5e0!3m2!1sen!2sin!4v1`;
+      }
+      return null;
     }
-    return null;
+
+    // If it's already an embed URL, return as is
+    if (googleMapLink.includes('/embed')) {
+      return googleMapLink;
+    }
+
+    // Convert share URL to embed URL
+    let embedUrl = googleMapLink;
+    
+    // Handle full Google Maps URLs
+    if (googleMapLink.includes('google.com/maps')) {
+      embedUrl = googleMapLink
+        .replace('google.com/maps?', 'google.com/maps/embed?')
+        .replace('google.com/maps/place/', 'google.com/maps/embed?pb=!1m18!1m12!1m3!1d3000!')
+        .replace('@', '');
+    }
+
+    // Handle short URLs
+    if (googleMapLink.includes('goo.gl/maps')) {
+      embedUrl = `https://www.google.com/maps/embed?pb=${googleMapLink.split('/').pop()}`;
+    }
+
+    return embedUrl;
   };
 
   const mapsUrl = getGoogleMapsUrl();
@@ -102,24 +126,40 @@ const FlatDetails = ({ flat }) => {
 
       <div>
         <h2 className="text-2xl font-semibold text-textDark mb-3">Location</h2>
-        {mapsUrl ? (
-          <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden">
-            <iframe 
-              src={`${mapsUrl.replace(/\bq=/, 'q=')}&output=embed`}
-              className="w-full h-64 border-0"
-              allowFullScreen="" 
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              title="Google Maps location"
-            ></iframe>
-          </div>
-        ) : (
-          <div className="aspect-w-16 aspect-h-9 bg-gray-200 rounded-lg overflow-hidden">
-            <div className="flex items-center justify-center h-full">
-              <p className="text-gray-500">Map not available</p>
+        <div className="space-y-3">
+          {mapsUrl && (
+            <a
+              href={googleMapLink || mapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <MapPin className="w-4 h-4 mr-2" />
+              Open in Google Maps
+            </a>
+          )}
+          
+          {mapsUrl ? (
+            <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden">
+              <iframe 
+                src={mapsUrl}
+                width="100%"
+                height="450"
+                style={{ border: 0 }}
+                allowFullScreen={true}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Google Maps location"
+              ></iframe>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="aspect-w-16 aspect-h-9 bg-gray-200 rounded-lg overflow-hidden">
+              <div className="flex items-center justify-center h-full">
+                <p className="text-gray-500">Map not available</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
