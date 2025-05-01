@@ -9,7 +9,7 @@ const EmailVerification = ({ email, onVerificationComplete }) => {
     try {
       setSending(true);
       const promise = await account.createVerification(
-        'http://localhost:5173/dashboard'
+        'https://renteasily.vercel.app/dashboard'
       );
       toast.success('Verification email sent! Please check your inbox.');
     } catch (error) {
